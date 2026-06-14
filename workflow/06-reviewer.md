@@ -26,6 +26,10 @@ Before looking at code, understand the intent:
 - What is this change trying to accomplish?
 - What spec or task does it implement?
 - What is the expected behavior change?
+- Load repo-specific review lenses if available: the target repo's
+  `CLAUDE.md`/`AGENTS.md` and, if present,
+  `~/.agents/skills/code-reviewer/references/project-profile.md` (framework
+  pitfalls, DI/flags/analytics, package boundaries, CI pre-flight).
 
 ### Step 2: Review the Tests First
 
@@ -58,7 +62,7 @@ Review the actual code changes against these criteria:
 - [ ] Are abstractions earning their complexity?
 
 #### Axis 3: Architecture
-- [ ] Follows existing repo-specific architectural patterns or justifies new ones
+- [ ] Follows existing repo patterns (module composition, state management, service structure) or justifies new ones
 - [ ] Maintains clean module boundaries
 - [ ] No code duplication that should be shared
 - [ ] Dependencies flow in the right direction (no circular deps)
@@ -73,16 +77,16 @@ Review the actual code changes against these criteria:
 - [ ] External data sources treated as untrusted
 
 #### Axis 5: Performance
-- [ ] No unnecessary re-renders or recomputation in UI components
+- [ ] No unnecessary re-renders in UI components
 - [ ] No heavy computation in render/update paths
 - [ ] No unbounded data structures
 - [ ] Lazy loading used where appropriate
 - [ ] No N+1 patterns or equivalent
 
-### Step 4: TypeScript Quality Spot Check
-- [ ] No new `any` types without documented justification
-- [ ] No unsafe type assertions (`as` casts that could mask errors)
-- [ ] Strict null checks respected
+### Step 4: Type Safety Spot Check (typed languages)
+- [ ] No new escape-hatch types without documented justification (e.g. `any`)
+- [ ] No unsafe type assertions / casts that could mask errors
+- [ ] Strict null/undefined handling respected
 - [ ] Generics used appropriately (not over-engineered)
 
 ### Step 5: Categorize Findings

@@ -15,17 +15,22 @@ Tool-agnostic command that runs an expert code review using the canonical
 1. **Read and follow** `~/.agents/skills/code-reviewer/SKILL.md`
    (and its `references/` files) as the source of truth for the workflow,
    review dimensions, and output format. Do not improvise a different process.
+   If `references/project-profile.md` exists, load it for repo-specific
+   dimensions.
 
 2. **Determine the review scope** from the input after the command:
-   - A **PR number or URL** (e.g. `277917`, or a `github.com` URL)
-     → PR review via the matching GitHub MCP, per the skill's "Getting the Diff → Option A".
+   - A **PR number or URL** → PR review. Detect the remote host
+     (`git remote get-url origin`) and use the matching GitHub/GitLab MCP or
+     `gh`/`glab` CLI, per the skill's "Getting the Diff → Option A" and the
+     project profile's host mapping.
    - **"staged"** or no input → **staged changes only** (`git diff --cached`).
      This is the default. Do not widen scope to the whole branch.
-   - **"branch" / "my changes" / "local"** → whole-branch diff vs `main`.
+   - **"branch" / "my changes" / "local"** → whole-branch diff vs the default branch.
    - If ambiguous, run `git status -s` and confirm before proceeding.
 
-3. **Apply the review** exactly as the skill specifies, including the
-   repo-specific dimensions.
+3. **Apply the review** exactly as the skill specifies: the universal
+   dimensions plus reuse/simplification, and any project-specific dimensions
+   from `references/project-profile.md` if present.
 
 4. **Output** per the skill: always give the conversational, file-by-file
    walkthrough (what changed, why, findings by severity). Write the full

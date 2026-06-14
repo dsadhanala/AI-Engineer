@@ -14,19 +14,29 @@ A multi-agent development workflow for taking ideas from ideation to production-
 │   ├── 04-tester.md           # Tester
 │   ├── 05-debugger.md         # Debugger
 │   └── 06-reviewer.md         # Reviewer
-├── artifacts/                 # Runtime artifacts (per-project, per-feature)
-│   └── {project}/
-│       └── {feature}/
-│           ├── prd.md         # PM output
-│           ├── plan.md        # Planner output
-│           ├── tasks/         # Individual task files
-│           │   ├── T001.md
-│           │   └── T002.md
-│           ├── status.md      # Current workflow status
-│           └── review.md      # Reviewer output
-└── templates/                 # Reusable templates
-    ├── task.md
-    └── status.md
+├── skills/                    # Portable AI skills (bring your own; synced into each tool)
+│   └── <name>/                #   each skill: SKILL.md (+ optional README.md, references/)
+├── commands/                  # Slash commands / prompts (synced into each tool)
+│   ├── feature.md             #   /feature  (workflow orchestrator)
+│   ├── pm|plan|build|test|debug|review.md   # workflow stages 01–06
+│   └── <name>.md              #   optional per-skill commands you add
+├── scripts/                   # Cross-tool sync tooling
+│   ├── sync-all.sh
+│   ├── sync-skills.sh
+│   ├── sync-commands.sh
+│   └── lib/sync-common.sh
+├── setup.sh                   # One-command install on a new machine
+├── templates/                 # Reusable templates
+│   ├── task.md
+│   └── status.md
+└── artifacts/                 # Runtime artifacts (git-ignored, per-project/feature)
+    └── {project}/
+        └── {feature}/
+            ├── prd.md         # PM output
+            ├── plan.md        # Planner output
+            ├── tasks/         # Individual task files (T001.md, ...)
+            ├── status.md      # Current workflow status
+            └── review.md      # Reviewer output
 ```
 
 ## Workflow
@@ -86,9 +96,21 @@ Each agent reads from and writes to `~/.agents/artifacts/{project}/{feature}/`. 
 Agents are project-agnostic by default. They discover project conventions by reading:
 1. `CLAUDE.md` or `AGENTS.md` at the project root
 2. `README.md` for project overview
-3. The project's build manifest (e.g., `package.json`, `Makefile`, `BUILD`, `Cargo.toml`, `pyproject.toml`) for build system
+3. `package.json`, `BUILD.bazel`, `Makefile`, etc. for build system
 4. Existing code patterns in the relevant directories
 5. `.cursor/rules/`, `.claude/rules/` for tool-specific conventions
+
+**Two layers of context, both consulted:**
+- **Per-repo (primary):** the target repo's own `CLAUDE.md`/`AGENTS.md` and the
+  files above. This is the source of truth for build/test commands and
+  conventions specific to that codebase, and it travels with the code.
+- **Personal defaults:** `~/.agents/docs/profile.md` (and `profile.local.md` if
+  present) carry your default stack, build/test commands, and habits. Consult
+  them so direct stage invocation inherits the same context as a tool that loads
+  its memory file. When reviewing code, also apply the review lenses in
+  `~/.agents/skills/code-reviewer/references/project-profile.md` if it exists.
+
+Per-repo context wins on conflict; personal defaults fill the gaps.
 
 ## How to Use
 
@@ -100,12 +122,19 @@ Agents are project-agnostic by default. They discover project conventions by rea
 6. **Review**: On test pass, invoke the Reviewer. It either approves or sends back to Debugger.
 7. **Repeat** steps 3-6 for each task until `ALL_TASKS_DONE`.
 
+Each step can be invoked with a **command** (`commands/`, synced into every tool)
+or by referencing the agent file directly.
+
 ### Quick Start
 
 ```
-# With any AI tool, reference the agent file:
+# Easiest — use the commands:
+/feature Project: {your-project}, Feature: {your-feature}   # start, then auto-route the loop
+#   or run a single stage:  /pm  /plan  /build  /test  /debug  /review
+
+# Or, with any AI tool, reference the agent file directly:
 # "Read ~/.agents/workflow/01-pm.md and follow its instructions.
-#  Project: my-project, Feature: my-feature"
+#  Project: {your-project}, Feature: {your-feature}"
 ```
 
 ## Design Principles
@@ -137,7 +166,7 @@ Before writing any code: "What is the simplest thing that could work?" Three sim
 Review findings are labeled (Critical / required / Nit / Optional / FYI) so everyone knows what's blocking vs. optional. Every "no" comes with a "here's how to fix it."
 
 ### Feasibility Before Architecture
-When the plan proposes reusing shared infrastructure (modules, clients, stores), the Planner must trace the full dependency chain in the target surface before committing. "Works in surface A" does not mean "works in surface B." A standalone 150-line implementation is better than a 50-line facade around shared infra that brings 5 unverified transitive dependencies. Resolve HIGH risks during planning — deferring to implementation is not mitigation.
+When the plan proposes reusing shared infrastructure (shared modules, clients, services/stores), the Planner must trace the full dependency chain in the target surface before committing. "Works in surface A" does not mean "works in surface B." A standalone 150-line implementation is better than a 50-line facade around shared infra that brings 5 unverified transitive dependencies. Resolve HIGH risks during planning — deferring to implementation is not mitigation.
 
 ### Layer Budget
 Count the abstraction layers between "user action" and "system effect." Target ≤ 3. Every additional layer adds integration surface, failure modes, and debugging complexity. If the architecture has 4+ layers, challenge whether each is earning its keep.
