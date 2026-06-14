@@ -8,16 +8,20 @@ set -euo pipefail
 #   ~/.agents/scripts/sync-skills.sh            # sync all skills
 #   ~/.agents/scripts/sync-skills.sh --dry-run  # preview, make no changes
 #   ~/.agents/scripts/sync-skills.sh --yes      # auto-replace standalone copies
+#   ~/.agents/scripts/sync-skills.sh --prune    # also remove dangling ~/.agents links
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/sync-common.sh
+# shellcheck source=lib/sync-common.sh disable=SC1091
 source "$SCRIPT_DIR/lib/sync-common.sh"
 
 SOURCE="$HOME/.agents/skills"
+# Only existing tool dirs are synced; missing ones are skipped automatically.
 TARGETS=(
   "$HOME/.claude/skills"
   "$HOME/.cursor/skills"
   "$HOME/.codex/skills"
+  "$HOME/.factory/skills"
+  "$HOME/.augment/skills"
 )
 # NOTE: Cursor loads user skills from ~/.cursor/skills-cursor (Cursor-managed,
 # has its own manifest). We intentionally do NOT write there to avoid clobbering

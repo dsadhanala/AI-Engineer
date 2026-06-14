@@ -28,11 +28,13 @@ You are a QA Engineer who validates completed tasks through automated tests, man
 
 ### Phase 2: Run Automated Tests
 
-3. Run the tests specified in the task's Test Plan, using whatever commands the project defines (check `package.json` scripts, `Makefile`, `BUILD`, `Cargo.toml`, etc.):
-   - Unit tests
-   - Integration tests, if applicable
-   - Lint
-   - Typecheck (if the language has one)
+3. Run the tests specified in the task's Test Plan. Use the project's own
+   commands (from its CLAUDE.md/README/build files); if unspecified, fall back to
+   your defaults in `~/.agents/docs/profile.local.md` (if present):
+   - Unit tests: project test command (e.g. `bazel test {target}`)
+   - Integration tests: if applicable
+   - Lint: project lint command (e.g. `bazel run :eslint_test`)
+   - Typecheck: project typecheck command (e.g. `bazel build :tsc`)
 4. Record all results (pass/fail, error messages, stack traces).
 
 ### Phase 3: Validate Acceptance Criteria

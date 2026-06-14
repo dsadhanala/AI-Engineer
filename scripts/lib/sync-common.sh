@@ -24,19 +24,22 @@ SYNC_CREATED=0
 SYNC_OK=0
 SYNC_FIXED=0
 SYNC_ATTENTION=0
+SYNC_PRUNED=0
 
-# parse_sync_flags <args...> — recognizes --dry-run/-n, --yes/-y, --help/-h.
-# DRY_RUN/ASSUME_YES/SYNC_SHOW_HELP are read by the sourcing script.
+# parse_sync_flags <args...> — recognizes --dry-run/-n, --yes/-y, --prune, --help/-h.
+# DRY_RUN/ASSUME_YES/PRUNE/SYNC_SHOW_HELP are read by the sourcing script.
 # shellcheck disable=SC2034
 parse_sync_flags() {
   DRY_RUN=false
   ASSUME_YES=false
+  PRUNE=false
   SYNC_SHOW_HELP=false
   local arg
   for arg in "$@"; do
     case "$arg" in
       --dry-run|-n) DRY_RUN=true ;;
       --yes|-y)     ASSUME_YES=true ;;
+      --prune)      PRUNE=true ;;
       -h|--help)    SYNC_SHOW_HELP=true ;;
       *) echo -e "${YELLOW}warning: ignoring unknown flag '$arg'${NC}" >&2 ;;
     esac
@@ -123,8 +126,11 @@ sync_source() {
       [[ -f "${p}SKILL.md" ]] && items+=("${p%/}")
     done
   else
+    # README.md is documentation for the source dir, not a command — skip it.
     for p in "$source_dir"/*.md; do
-      [[ -f "$p" ]] && items+=("$p")
+      [[ -f "$p" ]] || continue
+      [[ "$(basename "$p")" == "README.md" ]] && continue
+      items+=("$p")
     done
   fi
 
@@ -135,6 +141,12 @@ sync_source() {
 
   local target item base
   for target in "${targets[@]}"; do
+    # Skip tools that aren't installed (parent dir absent), so an inclusive
+    # TARGETS list never creates config dirs for tools you don't use.
+    if [[ ! -d "$(dirname "$target")" ]]; then
+      echo -e "\n${YELLOW}=== ${target/#$HOME/~} (tool not installed — skipped) ===${NC}"
+      continue
+    fi
     echo -e "\n${BLUE}=== ${target/#$HOME/~} ===${NC}"
     [[ "$dry" == false ]] && mkdir -p "$target"
     for item in "${items[@]}"; do
@@ -142,11 +154,30 @@ sync_source() {
       [[ "$base" == ".DS_Store" ]] && continue
       sync_one "$item" "$target/$base" "$dry" "$yes"
     done
+    if [[ "${PRUNE:-false}" == true ]]; then
+      prune_dangling "$target" "$dry"
+    fi
+  done
+}
+
+# prune_dangling <target_dir> <dry_run>
+# Removes symlinks in <target_dir> that we manage (they point into ~/.agents/)
+# but no longer resolve (dangling). Leaves real files and valid links untouched.
+prune_dangling() {
+  local target="$1" dry="$2" link tgt
+  for link in "$target"/*; do
+    [[ -L "$link" ]] || continue          # only symlinks
+    [[ -e "$link" ]] && continue          # skip ones that resolve
+    tgt=$(readlink "$link")
+    [[ "$tgt" == *"/.agents/"* ]] || continue  # only our managed links
+    echo -e "  ${RED}\xE2\x9C\x97${NC} $(basename "$link") (dangling \xE2\x86\x92 $tgt) — pruning"
+    [[ "$dry" == false ]] && rm -f "$link"
+    SYNC_PRUNED=$((SYNC_PRUNED + 1))
   done
 }
 
 sync_summary() {
-  echo -e "\n${GREEN}Done.${NC} Created: ${SYNC_CREATED} | OK: ${SYNC_OK} | Fixed: ${SYNC_FIXED} | Needs attention: ${SYNC_ATTENTION}"
+  echo -e "\n${GREEN}Done.${NC} Created: ${SYNC_CREATED} | OK: ${SYNC_OK} | Fixed: ${SYNC_FIXED} | Pruned: ${SYNC_PRUNED} | Needs attention: ${SYNC_ATTENTION}"
   [[ "${DRY_RUN:-false}" == true ]] && echo -e "${YELLOW}(dry run \xE2\x80\x94 no changes made)${NC}"
   return 0
 }

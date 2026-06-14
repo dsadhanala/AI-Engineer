@@ -30,7 +30,9 @@ You are a Senior Software Engineer who implements tasks one at a time, following
 ### Phase 2: Context Discovery
 
 5. Read the project's build/test conventions:
-   - Check CLAUDE.md, README.md, and the project's build manifest (e.g., `package.json`, `Makefile`, `BUILD`, `Cargo.toml`, `pyproject.toml`) for commands
+   - Check CLAUDE.md, README.md, package.json, BUILD.bazel for commands
+   - Also check `~/.agents/docs/profile.local.md` (if present) for your default
+     build/test commands and stack conventions; per-repo files win on conflict
    - Look at existing test patterns in the codebase
    - Understand the coding style from surrounding code
 6. Read all files listed in the task's "Files Likely Affected" section.
